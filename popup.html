@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>GoetheGrabber</title>
+   <style>
+       :root {
+           --bg-base: #0d1117;     /* Deep background */
+           --bg-surface: #161922;  /* Card background */
+           --bg-input: #0a0d12;    /* Input fields */
+           --border: #262a36;      /* Subtle lines */
+           --primary: #2dd4bf;     /* Mint Green */
+           --primary-hover: #14b8a6;
+           --primary-glow: rgba(45, 212, 191, 0.15);
+           --danger: #ef4444;      /* Red */
+           --text-main: #f8fafc;
+           --text-muted: #94a3b8;
+       }
+
+       body {
+           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+           background-color: var(--bg-base);
+           color: var(--text-main);
+           margin: 0;
+           padding: 24px;
+           width: 380px;
+           box-sizing: border-box;
+           display: flex;
+           justify-content: center;
+       }
+
+       .app-container {
+           background-color: var(--bg-surface);
+           border: 1px solid var(--border);
+           border-radius: 24px;
+           padding: 24px;
+           width: 100%;
+           position: relative;
+           overflow: hidden;
+           box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+       }
+
+       .top-glow {
+           position: absolute;
+           top: -80px;
+           left: 50%;
+           transform: translateX(-50%);
+           width: 250px;
+           height: 250px;
+           background: radial-gradient(circle, var(--primary-glow) 0%, transparent 60%);
+           pointer-events: none;
+           z-index: 0;
+       }
+
+       .header {
+           position: relative;
+           z-index: 1;
+           text-align: center;
+           border-bottom: 1px solid var(--border);
+           padding-bottom: 20px;
+           margin-bottom: 20px;
+       }
+
+       .title-container {
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           gap: 8px;
+           margin-bottom: 4px;
+       }
+
+       .status-dot {
+           width: 8px;
+           height: 8px;
+           background-color: var(--text-muted);
+           border-radius: 50%;
+           transition: all 0.3s ease;
+       }
+
+       .status-dot.active {
+           background-color: var(--primary);
+           box-shadow: 0 0 10px var(--primary);
+       }
+
+       .header h2 {
+           margin: 0;
+           font-size: 18px;
+           font-weight: 600;
+           color: var(--text-main);
+           letter-spacing: 0.5px;
+       }
+
+       .header span {
+           display: block;
+           font-size: 11px;
+           color: var(--text-muted);
+           letter-spacing: 1px;
+           text-transform: uppercase;
+       }
+
+       .status-text {
+           font-size: 22px;
+           font-weight: 700;
+           color: var(--text-muted);
+           margin-top: 16px;
+           letter-spacing: -0.5px;
+       }
+
+       .section-label {
+           position: relative;
+           z-index: 1;
+           font-size: 12px;
+           color: var(--text-muted);
+           letter-spacing: 0.5px;
+           font-weight: 600;
+           margin: 20px 0 10px 0;
+           padding-left: 4px;
+       }
+
+       .input-group { position: relative; z-index: 1; margin-bottom: 12px; }
+       .row { display: flex; gap: 12px; position: relative; z-index: 1; }
+       .row .input-group { flex: 1; }
+
+       input[type="text"], input[type="password"], input[type="email"] {
+           width: 100%;
+           padding: 14px 16px;
+           background-color: var(--bg-input);
+           border: 1px solid var(--border);
+           border-radius: 14px;
+           color: var(--text-main);
+           font-size: 13px;
+           font-weight: 500;
+           box-sizing: border-box;
+           transition: all 0.2s ease;
+       }
+
+       input:focus {
+           border-color: var(--primary);
+           outline: none;
+           box-shadow: 0 0 0 2px var(--primary-glow);
+       }
+
+       input::placeholder { color: #475569; font-weight: 400; }
+
+       .password-wrapper { position: relative; }
+       #togglePassword {
+           position: absolute;
+           right: 12px;
+           top: 50%;
+           transform: translateY(-50%);
+           background: none;
+           border: none;
+           cursor: pointer;
+           font-size: 14px;
+           padding: 0;
+           opacity: 0.6;
+           transition: opacity 0.2s;
+       }
+       #togglePassword:hover { opacity: 1; }
+
+       .module-grid {
+           display: grid;
+           grid-template-columns: 1fr 1fr;
+           gap: 10px;
+           position: relative;
+           z-index: 1;
+       }
+
+       .custom-checkbox {
+           display: flex;
+           align-items: center;
+           background: var(--bg-input);
+           border: 1px solid var(--border);
+           padding: 12px;
+           border-radius: 12px;
+           cursor: pointer;
+           transition: all 0.2s ease;
+       }
+
+       .custom-checkbox:hover { border-color: #475569; }
+
+       .custom-checkbox input {
+           margin-right: 10px;
+           accent-color: var(--primary);
+           width: 16px;
+           height: 16px;
+           cursor: pointer;
+       }
+
+       .custom-checkbox span { font-size: 13px; font-weight: 500; color: var(--text-main); }
+
+       .toggle-box {
+           display: flex;
+           align-items: center;
+           background: var(--primary-glow);
+           border: 1px solid rgba(45, 212, 191, 0.3);
+           padding: 14px;
+           border-radius: 14px;
+           margin: 16px 0 24px 0;
+           cursor: pointer;
+           position: relative;
+           z-index: 1;
+       }
+
+       .toggle-box input { margin: 0 12px 0 0; accent-color: var(--primary); width: 16px; height: 16px; }
+       .toggle-box label { font-size: 12px; color: var(--primary); line-height: 1.4; font-weight: 500; cursor: pointer; }
+
+       .btn-primary {
+           position: relative;
+           z-index: 1;
+           width: 100%;
+           background: var(--primary);
+           color: #0d1117;
+           border: none;
+           padding: 16px;
+           border-radius: 14px;
+           font-size: 14px;
+           font-weight: 700;
+           text-transform: uppercase;
+           letter-spacing: 0.5px;
+           cursor: pointer;
+           margin-bottom: 12px;
+           transition: all 0.2s ease;
+           box-shadow: 0 4px 15px rgba(45, 212, 191, 0.2);
+       }
+
+       .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+       .btn-primary:active { transform: translateY(0); }
+
+       .btn-danger {
+           position: relative;
+           z-index: 1;
+           width: 100%;
+           background: var(--bg-input);
+           color: var(--danger);
+           border: 1px solid var(--border);
+           padding: 14px;
+           border-radius: 14px;
+           font-size: 13px;
+           font-weight: 600;
+           text-transform: uppercase;
+           letter-spacing: 0.5px;
+           cursor: pointer;
+           transition: all 0.2s ease;
+       }
+
+       .btn-danger:hover { background: #2a161b; border-color: rgba(239, 68, 68, 0.4); }
+   </style>
+</head>
+<body>
+
+   <div class="app-container">
+       <div class="top-glow"></div>
+
+       <div class="header">
+           <div class="title-container">
+               <div class="status-dot" id="statusIndicator"></div>
+               <h2>GoetheGrabber</h2>
+           </div>
+           <span>Created by SVY</span>
+           
+           <div class="status-text" id="statusBadge">Ready to Start</div>
+       </div>
+
+       <div class="section-label">Exam Link (URL)</div>
+       <div class="input-group">
+           <input type="text" id="mainUrl" placeholder="Paste the exam link here...">
+       </div>
+
+       <div class="section-label">Goethe Login Details</div>
+       <div class="row">
+           <div class="input-group">
+               <input type="email" id="email" placeholder="Email Address">
+           </div>
+           <div class="input-group password-wrapper">
+               <input type="password" id="password" placeholder="Password">
+               <button type="button" id="togglePassword">👁️</button>
+           </div>
+       </div>
+
+       <div class="section-label">Credit Card Details</div>
+       <div class="input-group">
+           <input type="text" id="ccName" placeholder="Name on Card">
+       </div>
+       <div class="input-group">
+           <input type="text" id="ccNum" placeholder="Card Number (no spaces)">
+       </div>
+       <div class="row">
+           <div class="input-group">
+               <input type="text" id="ccExp" placeholder="Expiry Date (MM/YY)">
+           </div>
+           <div class="input-group">
+               <input type="text" id="ccCvv" placeholder="CVV">
+           </div>
+       </div>
+
+       <div class="section-label">Choose Modules to Book</div>
+       <div class="module-grid">
+           <label class="custom-checkbox"><input type="checkbox" id="mod-reading" checked><span>Reading</span></label>
+           <label class="custom-checkbox"><input type="checkbox" id="mod-writing"><span>Writing</span></label>
+           <label class="custom-checkbox"><input type="checkbox" id="mod-speaking"><span>Speaking</span></label>
+           <label class="custom-checkbox"><input type="checkbox" id="mod-listening"><span>Listening</span></label>
+       </div>
+
+       <label class="toggle-box">
+           <input type="checkbox" id="partialMatch" checked>
+           <label for="partialMatch">Allow Partial Booking: Book my exam even if some of the selected modules are full.</label>
+       </label>
+
+       <button class="btn-primary" id="startBtn">▶️ Start Bot</button>
+       <button class="btn-danger" id="stopBtn">⏹️ Stop Bot</button>
+   </div>
+
+   <script src="popup.js"></script>
+</body>
+</html>
