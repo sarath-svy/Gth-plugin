@@ -1,13 +1,13 @@
-# GoetheGrabber
+# Booking Grabber
 
-A Chrome / Edge (Manifest V3) browser extension that automates the Goethe-Institut
-exam booking flow: it grabs the live "select modules" link the moment booking opens,
-navigates the booking pages, fills your login and payment details, and clicks **Pay**.
+A Chrome / Edge (Manifest V3) browser extension that automates an online exam-booking
+flow: it grabs the live "select modules" link the moment booking opens, navigates the
+booking pages, fills your login and payment details, and clicks **Pay**.
 
 > ⚠️ **Disclaimer**
-> This tool automates interaction with the Goethe-Institut website and polls their
+> This tool automates interaction with a third-party booking website and polls its
 > server to obtain the booking link as soon as it goes live. Automated booking and
-> queue-bypassing are very likely against the Goethe-Institut Terms of Service and can
+> queue-bypassing are very likely against the target site's Terms of Service and can
 > disadvantage other applicants. Use it only for your **own** booking and entirely at
 > your own risk. The authors take no responsibility for blocked accounts, failed
 > bookings, or any other consequences. Your login and card details are stored
@@ -17,16 +17,16 @@ navigates the booking pages, fills your login and payment details, and clicks **
 
 ## Features
 
-- **Live link grabber** — cache-busted fetch of the exam page; scrapes `examButtonLink`
-  and jumps straight to module selection the instant booking opens (no waiting for the
-  page button to render).
+- **Live link grabber** — cache-busted fetch of the booking page; scrapes the booking
+  link and jumps straight to module selection the instant booking opens (no waiting for
+  the page button to render).
 - **Second-precise scheduler** — schedule the bot to engage at an exact time, down to
-  the second (keep the exam tab open).
+  the second (keep the booking tab open).
 - **Full booking automation** — handles login, module selection (with optional partial
-  booking), selection / voucher / summary steps, the PaymentIQ credit-card iframe, and
-  the final Pay click.
-- **Queue ("wicket") handling** — on a queue hit it waits out a randomized penalty,
-  then reuses the already-saved booking link to return to module selection.
+  booking), selection / voucher / summary steps, the payment credit-card iframe, and the
+  final Pay click.
+- **Queue handling** — on a queue ("waiting room") hit it waits out a randomized
+  penalty, then reuses the already-saved booking link to return to module selection.
 
 ## Project structure
 
@@ -37,7 +37,7 @@ g-plugin/
     ├── manifest.json      Extension manifest (MV3)
     ├── popup.html         Popup UI (config form + scheduler)
     ├── popup.js           Saves config to storage, starts/stops the bot
-    └── content.js         The automation engine (injected into goethe.de pages)
+    └── content.js         The automation engine (injected into the booking pages)
 ```
 
 ---
@@ -53,7 +53,7 @@ The extension is unpacked (not from the Web Store), so you load it in developer 
 3. Toggle **Developer mode** on (top-right).
 4. Click **Load unpacked**.
 5. Select the **`Gth-plugin`** folder (the one containing `manifest.json`).
-6. Pin **GoetheGrabber** from the puzzle-piece toolbar menu for quick access.
+6. Pin the extension from the puzzle-piece toolbar menu for quick access.
 
 ### Microsoft Edge
 
@@ -67,17 +67,17 @@ Same steps — open the browser's extensions page, enable developer mode, and
 **Load unpacked** the `Gth-plugin` folder.
 
 > After editing any source file, return to the extensions page and click the **reload**
-> (↻) icon on the GoetheGrabber card to apply changes.
+> (↻) icon on the extension card to apply changes.
 
 ---
 
 ## Usage
 
-1. Log in to your Goethe-Institut account in the browser.
-2. Open your **exam page** (`…/gzb2.cfm?examId=<HEX>`) in a tab and keep it open.
-3. Click the **GoetheGrabber** toolbar icon to open the popup and fill in:
-   - **Exam Link (URL)** — paste the exam page URL.
-   - **Goethe Login Details** — email + password.
+1. Log in to your booking account in the browser.
+2. Open your **booking page** in a tab and keep it open.
+3. Click the extension's toolbar icon to open the popup and fill in:
+   - **Exam Link (URL)** — paste the booking page URL.
+   - **Login Details** — email + password.
    - **Credit Card Details** — name, number, expiry (MM/YY), CVV.
    - **Modules** — tick the modules you want; toggle **Allow Partial Booking** if you
      want to proceed even when some modules are full.
@@ -86,8 +86,8 @@ Same steps — open the browser's extensions page, enable developer mode, and
 4. Click **▶️ Start Bot**. The status badge shows *Bot is Running* (or *Scheduled · …*).
 5. Click **⏹️ Stop Bot** at any time to halt it.
 
-Open DevTools (**F12**) → **Console** on the exam tab to watch the engine logs
-(`⏰ [Scheduler]`, `🏠 [State: Exam Page]`, `🛑 [State: Wicket]`, etc.).
+Open DevTools (**F12**) → **Console** on the booking tab to watch the engine logs
+(`⏰ [Scheduler]`, `🏠 [State: Exam Page]`, queue/penalty messages, etc.).
 
 ---
 
@@ -99,7 +99,7 @@ Initialize and push the repository:
 cd "g-plugin"
 git init
 git add .
-git commit -m "Initial commit: GoetheGrabber extension"
+git commit -m "Initial commit: Booking Grabber extension"
 
 # point at your remote (replace with your own repo URL)
 git branch -M main
@@ -123,14 +123,13 @@ node_modules/
 ## How it works (brief)
 
 `popup.js` writes your configuration to `chrome.storage.local` and messages the active
-tab to start. `content.js` is injected into `goethe.de`, `login.goethe.de`, and
-`*.paymentiq.io` pages and runs a self-scheduling loop (`runAutomationCycle`) that
-branches on the current URL: it fetches the live booking link, selects modules, logs in,
-walks the checkout, fills the card iframe, and clicks Pay — recovering from queue
-("wicket") pages along the way.
+tab to start. `content.js` is injected into the booking site's pages and runs a
+self-scheduling loop (`runAutomationCycle`) that branches on the current URL: it fetches
+the live booking link, selects modules, logs in, walks the checkout, fills the card
+iframe, and clicks Pay — recovering from queue / waiting-room pages along the way.
 
 ## Requirements
 
 - A Chromium-based browser (Chrome, Edge, Brave) with developer mode.
-- A valid Goethe-Institut account.
-- *(Optional, for `test-link.bat`/`test-link.js` standalone tester)* Node.js 18+.
+- A valid account on the booking site.
+- *(Optional, for the standalone link tester)* Node.js 18+.
