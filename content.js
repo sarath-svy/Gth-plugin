@@ -85,12 +85,55 @@ async function getBotState() {
 }
 
 // ==========================================
+// LIVE BOOKING-LINK GRABBER (ported from test-link.js)
+// Cache-busted fetch of the exam page -> scrape window['examButtonLink'].
+// Empty string until booking opens; once live it's the "select modules" link.
+// ==========================================
+function parseExamButtonLink(text) {
+   if (!text) return '';
+   const m = text.match(/examButtonLink['"]?\]?\s*=\s*["']([^"']*)["']/);
+   return m ? m[1].trim() : '';
+}
+
+async function fetchBookingLink(examUrl) {
+   const sep = examUrl.includes('?') ? '&' : '?';
+   const bust = `${examUrl}${sep}_cb=${Date.now()}`; // defeat browser + edge cache
+   const r = await fetch(bust, {
+       cache: 'no-store',
+       credentials: 'include', // carry the logged-in goethe.de session
+       headers: {
+           'Cache-Control': 'no-cache, no-store, max-age=0',
+           'Pragma': 'no-cache',
+       },
+   });
+   const html = await r.text();
+   const link = parseExamButtonLink(html);
+   return link ? new URL(link, examUrl).href : ''; // resolve relative -> absolute
+}
+
+// ==========================================
 // MASTER LOOP 
 // ==========================================
 async function runAutomationCycle() {
    try {
        const state = await getBotState();
-       if (!state.bot_active) return; 
+       if (!state.bot_active) return;
+
+       // ---------------------------------------------------------
+       // SCHEDULER GATE: hold until the exact scheduled second (runs once)
+       // ---------------------------------------------------------
+       if (!window.__ggScheduleHonored && state.scheduled_start_ts) {
+           const target = state.scheduled_start_ts;
+           let now = Date.now();
+           if (now < target) {
+               const wait = target - now;
+               console.log(`⏰ [Scheduler] Holding ${(wait / 1000).toFixed(1)}s until scheduled start (${new Date(target).toLocaleTimeString()})...`);
+               if (wait > 300) await sleep(wait - 300);     // coarse async wait
+               while (Date.now() < target) { /* tight spin for sub-second accuracy */ }
+               console.log("⏰ [Scheduler] Scheduled time reached. Engaging engine.");
+           }
+       }
+       window.__ggScheduleHonored = true;
 
        if (document.readyState !== 'complete') {
            setTimeout(runAutomationCycle, 500);
@@ -212,21 +255,39 @@ async function runAutomationCycle() {
            console.log(`⏳ [State: Penalty] Waiting ${Math.round(remainingSleep/1000)} seconds to evade ban...`);
            await sleep(remainingSleep);
            await chrome.storage.local.remove("wicket_timeout");
+
+           // Penalty served. The booking link doesn't change, so reuse the one we
+           // already grabbed instead of fetching again — jump straight to selection.
+           if (state.booking_link) {
+               console.log("↩️ [State: Penalty] Delay over. Reusing saved booking link: " + state.booking_link);
+               window.location.href = state.booking_link;
+               return;
+           }
+           // No saved link yet (wicket hit before booking opened) — fall through to fetch.
        }
 
-       // --- STATE: EXAM ID (Landing Page) ---
+       // --- STATE: EXAM ID (Exam Page) ---
+       // Instead of waiting for the rendered "select modules" button, fetch the
+       // exam page fresh (cache-busted) and grab the live booking link directly,
+       // then navigate straight to module selection.
        if (currentUrl.includes('examid') || currentUrl === state.config_mainUrl.toLowerCase()) {
-           console.log("🏠 [State: Landing Page] Searching for booking button...");
-           const firstBtn = document.querySelector("a[onclick='gotoExamDetail()']");
-           if (firstBtn) {
-               console.log("👉 [State: Landing Page] Button found! Clicking...");
-               await humanClick(firstBtn);
-               setTimeout(runAutomationCycle, 2000);
-           } else {
-               console.log("🔄 [State: Landing Page] No buttons available. Refreshing page...");
-               await sleep(Math.random() * 3000);
-               window.location.reload();
+           if (window.__ggFetchingLink) { setTimeout(runAutomationCycle, 500); return; }
+           window.__ggFetchingLink = true;
+           console.log("🏠 [State: Exam Page] Fetching live booking link (cache-busted, direct)...");
+           try {
+               const link = await fetchBookingLink(state.config_mainUrl);
+               if (link) {
+                   console.log("✅ [State: Exam Page] Booking link LIVE: " + link);
+                   await chrome.storage.local.set({ booking_link: link });
+                   window.location.href = link; // jump straight to module selection
+                   return;
+               }
+               console.log("⏳ [State: Exam Page] Not open yet. Retrying after delay...");
+           } catch (e) {
+               console.log("⚠️ [State: Exam Page] Fetch error: " + e.message);
            }
+           window.__ggFetchingLink = false;
+           setTimeout(runAutomationCycle, 2000 + Math.random() * 1000); // poll cadence
            return;
        }
 
@@ -363,6 +424,8 @@ initializeBot();
 chrome.runtime.onMessage.addListener((request) => {
    if (request.action === "START_CLICKING") {
        console.log("🚀 Sequence Started by User.");
+       window.__ggScheduleHonored = false; // re-honor schedule on a fresh start
+       window.__ggFetchingLink = false;
        runAutomationCycle();
    }
    if (request.action === "STOP_CLICKING") {
